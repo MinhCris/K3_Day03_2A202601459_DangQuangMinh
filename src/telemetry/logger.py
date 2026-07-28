@@ -19,10 +19,13 @@ class IndustryLogger:
         # File Handler (JSON)
         log_file = os.path.join(log_dir, f"{datetime.now().strftime('%Y-%m-%d')}.log")
         file_handler = logging.FileHandler(log_file)
-        
-        # Console Handler
+        file_handler.setFormatter(logging.Formatter("%(message)s"))
+
+        # Console Handler for errors only
         console_handler = logging.StreamHandler()
-        
+        console_handler.setLevel(logging.WARNING)
+        console_handler.setFormatter(logging.Formatter("%(message)s"))
+
         self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
 

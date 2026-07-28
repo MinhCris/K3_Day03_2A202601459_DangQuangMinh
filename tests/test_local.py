@@ -1,11 +1,14 @@
 import os
 import sys
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except Exception:
+    # dotenv not installed in some environments (e.g. offline test); provide a no-op fallback
+    def load_dotenv(*args, **kwargs):
+        return False
 
 # Add src to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from src.core.local_provider import LocalProvider
 
 def test_local_phi3():
     load_dotenv()
@@ -20,6 +23,10 @@ def test_local_phi3():
         return
 
     try:
+        # Import lazily: the regular offline test suite should not require the
+        # optional llama-cpp dependency or a downloaded GGUF model.
+        from src.core.local_provider import LocalProvider
+
         provider = LocalProvider(model_path=model_path)
         
         prompt = "Explain what an AI Agent is in one sentence."

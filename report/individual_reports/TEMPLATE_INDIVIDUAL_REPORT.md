@@ -1,51 +1,41 @@
-# Individual Report: Lab 3 - Chatbot vs ReAct Agent
+# Báo cáo cá nhân: Lab 3 - Chatbot vs ReAct Agent
 
-- **Student Name**: [Your Name Here]
-- **Student ID**: [Your ID Here]
-- **Date**: [Date Here]
-
----
-
-## I. Technical Contribution (15 Points)
-
-*Describe your specific contribution to the codebase (e.g., implemented a specific tool, fixed the parser, etc.).*
-
-- **Modules Implementated**: [e.g., `src/tools/search_tool.py`]
-- **Code Highlights**: [Copy snippets or link file lines]
-- **Documentation**: [Brief explanation of how your code interacts with the ReAct loop]
+- **Tên sinh viên**: Dang Quang Minh
+- **Mã sinh viên**: 2A202601459
+- **Ngày**: 2026-07-28
 
 ---
 
-## II. Debugging Case Study (10 Points)
+## I. Đóng góp kỹ thuật (15 điểm)
 
-*Analyze a specific failure event you encountered during the lab using the logging system.*
+- **Các mô-đun đã triển khai**:
+  - `src/agent/agent.py`: xây dựng vòng lặp ReAct, trích xuất `Action`/`Final Answer`, parsing đối số an toàn, dispatch callable, guardrail cho hành động lặp lại và hệ thống telemetry.
+  - `src/tools/ecommerce.py`: triển khai các tool thương mại với kiểm tra tồn kho, mã giảm giá, phí vận chuyển và tính tổng đơn hàng rõ ràng.
+  - `src/chatbot.py`: tạo baseline Chatbot một lần gọi để so sánh công bằng với ReAct agent.
+  - `src/core/provider_factory.py` và `src/main.py`: cấu hình provider linh hoạt và giao diện dòng lệnh cho cả OpenAI/Gemini/Local.
+  - `scripts/analyze_logs.py` và `tests/`: phân tích số liệu telemetry và chạy 10 bài kiểm tra offline.
 
-- **Problem Description**: [e.g., Agent caught in an infinite loop with `Action: search(None)`]
-- **Log Source**: [Link or snippet from `logs/YYYY-MM-DD.log`]
-- **Diagnosis**: [Why did the LLM do this? Was it the prompt, the model, or the tool spec?]
-- **Solution**: [How did you fix it? (e.g., updated `Thought` examples in the system prompt)]
+- **Điểm nhấn code**: các đối số tool được giải mã bằng `json.loads` và `ast.literal_eval`, không dùng `eval`; tool chỉ được gọi khi handler đã đăng ký trong danh sách. Kết quả tool được chuyển thành `Observation` và gửi lại cho LLM trong bước tiếp theo.
 
----
+- **Tài liệu**: README hướng dẫn cài đặt, chuyển đổi provider, lệnh CLI, chạy test, phân tích telemetry và định nghĩa tool. Báo cáo nhóm ghi nhận thay đổi thiết kế từ v1 sang v2 và một trace lỗi cụ thể.
 
-## III. Personal Insights: Chatbot vs ReAct (10 Points)
+## II. Case study gỡ lỗi (10 điểm)
 
-*Reflect on the reasoning capability difference.*
+- **Mô tả sự cố**: model trả về `Action: check_stock {item_name: iPhone 15}` thay vì định dạng gọi hàm đúng và JSON hợp lệ.
+- **Nguồn log**: khi chạy `tests/test_agent.py`, có sự kiện `AGENT_PARSE_ERROR` trong file log `logs/YYYY-MM-DD.log`; sự kiện ghi lại phản hồi lỗi và bước thực hiện.
+- **Chẩn đoán**: lỗi thuộc về sự không khớp giữa parser và hợp đồng định dạng tool, không phải lỗi dữ liệu kho. Mô hình nhận prompt thiếu cấu trúc đủ mạnh để cung cấp đối số đúng định dạng.
+- **Giải pháp**: cập nhật prompt hệ thống v2 và phần mô tả tool để luôn cho ví dụ JSON. Agent giờ nhận diện được action không hợp lệ, trả về observation `PARSER_ERROR` và cho phép phiên tiếp theo sửa lại action hoặc trả lời trực tiếp. Trace lỗi hiện được ghi lại rõ ràng thay vì bị ẩn.
 
-1.  **Reasoning**: How did the `Thought` block help the agent compared to a direct Chatbot answer?
-2.  **Reliability**: In which cases did the Agent actually perform *worse* than the Chatbot?
-3.  **Observation**: How did the environment feedback (observations) influence the next steps?
+## III. Nhận xét cá nhân: Chatbot vs ReAct (10 điểm)
 
----
+1. **Reasoning**: `Thought` thể hiện ý định trung gian, nhưng giá trị thực sự nằm ở việc quyết định sử dụng tool nào. Sự khác biệt quan trọng là agent dùng các bước rõ ràng để lấy dữ liệu tồn kho, mã giảm giá, trọng lượng, phí vận chuyển rồi mới tính tổng.
+2. **Độ tin cậy**: agent có thể kém hơn chatbot khi câu hỏi đơn giản không cần tool, vì agent tăng thêm độ trễ, chi phí token và rủi ro parse. Chatbot một lần gọi tốt hơn với yêu cầu không cần dữ liệu ngoài.
+3. **Quan sát**: observation cung cấp phản hồi thực tế cho bước tiếp theo. Ví dụ, agent nhận `unit_price_vnd` và `unit_weight_kg` chính xác từ `check_stock` thay vì tự đoán. Khi lỗi xảy ra, observation giúp agent sửa lại an toàn.
 
-## IV. Future Improvements (5 Points)
+## IV. Cải tiến trong tương lai (5 điểm)
 
-*How would you scale this for a production-level AI agent system?*
+- **Khả năng mở rộng**: dùng gọi tool bất đồng bộ và hàng đợi cho dịch vụ chậm.
+- **An toàn**: thêm kiểm tra phân quyền người dùng, validate đầu vào, giới hạn tỷ lệ, timeout và policy audit trước các tool thay đổi trạng thái.
+- **Hiệu năng**: chỉ truy xuất tool liên quan trong kho tool lớn và cache kết quả ổn định.
+- **Chất lượng**: đánh giá nhà cung cấp thực tế bằng bộ test versioned, lưu trace vào cơ sở dữ liệu và dùng thống kê lỗi để cải thiện mô tả tool và prompt liên tục.
 
-- **Scalability**: [e.g., Use an asynchronous queue for tool calls]
-- **Safety**: [e.g., Implement a 'Supervisor' LLM to audit the agent's actions]
-- **Performance**: [e.g., Vector DB for tool retrieval in a many-tool system]
-
----
-
-> [!NOTE]
-> Submit this report by renaming it to `REPORT_[YOUR_NAME].md` and placing it in this folder.
